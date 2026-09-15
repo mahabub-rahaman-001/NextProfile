@@ -2,9 +2,9 @@
 
 > **Your profile, resume, portfolio, and next opportunity in one place.**
 
-NextProfile is a full-stack career profile builder for creating a structured professional profile once and publishing it as a resume, CV, portfolio website, public profile, PDF, and QR-enabled business card. It includes onboarding, profile sections, multiple resume and portfolio themes, sharing controls, analytics, version history, job matching, and review tools.
+NextProfile is a full-stack career identity platform for students, professionals, researchers, freelancers, and anyone who wants one reliable source for their career information. Build a structured profile once, then turn it into a tailored resume, CV, portfolio website, public career profile, PDF, QR-enabled business card, or embeddable profile card.
 
-The core workflow is simple: build your profile once, tailor a resume for an opportunity, review it, publish the right version, and share it through a public link, PDF, QR code, or embed card.
+The workflow is designed around the way people actually apply for opportunities: complete your profile, choose the right resume or portfolio presentation, tailor it for a role, review the content, publish the appropriate version, and share it through a link, PDF, QR code, or embed. Version history preserves the content and layout that was sent, while private share links, visibility controls, analytics, job matching, and profile review tools support the rest of the process.
 
 One profile in → resume, CV, portfolio website, public career profile, PDF and QR out.
 
