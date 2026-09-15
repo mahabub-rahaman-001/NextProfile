@@ -1,0 +1,83 @@
+# ============================================================
+# NextProfile — .env changes
+#
+# The .env file itself could not be written remotely (blocked by policy),
+# so apply these by hand:
+#
+#   1. CHANGE the three lines under [CHANGE] below — they already exist
+#      in your .env with empty or wrong values.
+#   2. APPEND everything under [ADD] to the end of your .env.
+#   3. Delete this file afterwards. It is NOT covered by .gitignore,
+#      so do not leave it sitting in the repo.
+#
+# Your existing DATABASE_URL and AUTH_SECRET are untouched and are
+# deliberately not reproduced here.
+# ============================================================
+
+
+# ---------------------------- [CHANGE] ----------------------------
+# These three keys already exist in your .env. Replace their lines.
+
+# Was empty -> every PDF and business-card download returned 502.
+# Freshly generated, 32 random bytes.
+PRINT_TOKEN_SECRET="UwQtyB3UZTrT5aBhv1mkosri8U6wZPc9eOsf7CBzMpM="
+
+# Was empty -> visitor hashing fell back to the literal "dev-salt",
+# which is public in the source. Freshly generated, 32 random bytes.
+ANALYTICS_SALT="zjJ+SiRZuQVGgba66JJRfQGNdMegIkvTL5dutTkeigU="
+
+# Was "true" -> reset links were shown on screen to anyone who asked.
+AUTH_DEV_SHOW_RESET_LINK="false"
+
+
+# ------------------------------ [ADD] ------------------------------
+# New keys. Append this whole block to the end of your .env.
+
+# ---------- proxy / rate limiting ----------
+# How many proxies sit in front of the app. The limiter reads the client
+# address this many entries in from the RIGHT of X-Forwarded-For, so a
+# caller cannot pick their own rate-limit key.
+#   1 = Vercel, or a single nginx / load balancer   <- your deployment
+#   2 = Cloudflare in front of your own proxy
+#   0 = nothing in front; the header is ignored entirely
+TRUSTED_PROXY_HOPS="1"
+
+# Required on Vercel. Without it the limiter uses per-process memory,
+# and every serverless invocation starts with an empty map -- which means
+# no rate limiting at all. Upstash has a free tier.
+# REDIS_URL="rediss://default:PASSWORD@HOST:PORT"
+
+# ---------- email (Gmail / Google Workspace) ----------
+# SMTP_PASS must be a Google App Password, not your account password:
+#   myaccount.google.com -> Security -> 2-Step Verification -> App passwords
+# Until SMTP_USER and SMTP_PASS are both filled in, the app logs the reset
+# link in development and logs a clear error in production.
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="465"
+SMTP_USER=""
+SMTP_PASS=""
+EMAIL_FROM="NextProfile <your-address@gmail.com>"
+
+# ---------- object storage (S3 / R2) ----------
+# Change STORAGE_DRIVER to "s3" once the four values below are filled in.
+# Leaving it "local" on Vercel means uploaded photos are gone on the next
+# deploy -- the filesystem is discarded between invocations.
+S3_BUCKET=""
+S3_REGION="auto"
+S3_ACCESS_KEY_ID=""
+S3_SECRET_ACCESS_KEY=""
+# Cloudflare R2, Backblaze and MinIO need this; plain AWS S3 does not.
+S3_ENDPOINT=""
+
+# ---------- google sign-in ----------
+# /api/auth/google stays closed (503) while this is empty, because without
+# it the ID token's audience cannot be verified -- and an unverified
+# audience means a token issued to ANY Google app would be accepted.
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
+
+# ---------- PDF rendering on Vercel ----------
+# A bundled Chromium does not fit in a serverless function, so the local
+# fallback renderer will not run on Vercel. Point this at your render
+# service before launch or PDF downloads will fail in production.
+# RENDER_SERVICE_URL=""
+# RENDER_SERVICE_SECRET=""

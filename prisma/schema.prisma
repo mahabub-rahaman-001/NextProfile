@@ -1,0 +1,565 @@
+// NextProfile — schema.prisma
+// See docs/03-DATA-MODEL.md. Rule: content lives in relational tables,
+// presentation lives ONLY in Document.config and Portfolio.config.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ============================= ACCOUNT =============================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  emailVerified DateTime?
+  username      String?   @unique
+  usernameLockedUntil DateTime?
+  plan          Plan      @default(FREE)
+  role          Role      @default(USER)
+  /// Set by an admin. A suspended account cannot sign in and its public
+  /// profile stops resolving; nothing is deleted.
+  suspendedAt   DateTime?
+  suspendedReason String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile        Profile?
+  educations     Education[]
+  experiences    Experience[]
+  skills         Skill[]
+  projects       Project[]
+  certifications Certification[]
+  achievements   Achievement[]
+  publications   Publication[]
+  researches     Research[]
+  conferences    Conference[]
+  services       Service[]
+  caseStudies    CaseStudy[]
+  testimonials   Testimonial[]
+  documents      Document[]
+  versions       DocumentVersion[]
+  applications   Application[]
+  shareLinks     ShareLink[]
+  portfolio      Portfolio?
+  aiRequests     AIRequest[]
+  events         AnalyticsEvent[]
+  sessions       Session[]
+  tokens         VerificationToken[]
+
+  @@index([username])
+}
+
+enum Plan {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  kind      String // "verify_email" | "reset_password"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind])
+}
+
+// ============================= PROFILE =============================
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // onboarding answers — ordinary editable fields, never a one-time wizard result
+  profileType ProfileType @default(STUDENT)
+  discipline  String?
+  careerGoal  CareerGoal  @default(FIND_JOB)
+  wants       String[]    @default([])
+  onboardedAt DateTime?
+
+  fullName  String  @default("")
+  headline  String?
+  about     String?
+  photoUrl  String?
+  location  String?
+  languages String[] @default([])
+
+  contact Json @default("{}") // { email, phone, showEmail, showPhone, showLocation }
+  links   Json @default("{}") // { website, github, linkedin, behance, scholar, … }
+  seo     Json @default("{}") // { metaTitle, metaDescription, allowIndexing }
+
+  visibility  Visibility @default(PRIVATE)
+  publishedAt DateTime?
+
+  completeness Int      @default(0)
+  /// The full scorer result ({ score, missing[] }), cached on write so the
+  /// dashboard does not run twelve COUNT queries on every page view.
+  completenessDetail Json @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum ProfileType {
+  STUDENT
+  JOB_SEEKER
+  PROFESSIONAL
+  FREELANCER
+  RESEARCHER
+  TEACHER
+  CREATIVE
+  ENTREPRENEUR
+  OTHER
+}
+
+enum CareerGoal {
+  INTERNSHIP
+  FIND_JOB
+  HIGHER_STUDY
+  FREELANCE_CLIENTS
+  BUILD_PORTFOLIO
+  PROFESSIONAL_PRESENCE
+  PROMOTE_SERVICES
+  PERSONAL_BRAND
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
+  UNLISTED
+  RECRUITER
+}
+
+// ============================= RECORD TABLES =============================
+
+model Education {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution String
+  degree      String?
+  field       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  current     Boolean   @default(false)
+  grade       String?
+  details     String?
+  sortOrder   Float     @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Experience {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company    String
+  role       String
+  employment String?
+  location   String?
+  startDate  DateTime?
+  endDate    DateTime?
+  current    Boolean   @default(false)
+  summary    String?
+  bullets    String[]  @default([])
+  sortOrder  Float     @default(0)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Skill {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  category  String?
+  level     Int?
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  summary     String?
+  description String?
+  role        String?
+  outcome     String?
+  tags        String[]  @default([])
+  links       Json      @default("{}")
+  images      Json      @default("[]")
+  startDate   DateTime?
+  endDate     DateTime?
+  featured    Boolean   @default(false)
+  sortOrder   Float     @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+  @@index([userId, featured])
+}
+
+model Certification {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  issuer        String?
+  issueDate     DateTime?
+  expiryDate    DateTime?
+  credentialId  String?
+  credentialUrl String?
+  sortOrder     Float     @default(0)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  issuer      String?
+  date        DateTime?
+  description String?
+  kind        String?
+  sortOrder   Float     @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Publication {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  authors   String[]  @default([])
+  venue     String?
+  year      Int?
+  type      String?
+  doi       String?
+  url       String?
+  citation  String?
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Research {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  supervisor  String?
+  institution String?
+  abstract    String?
+  status      String?
+  startDate   DateTime?
+  endDate     DateTime?
+  sortOrder   Float     @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Conference {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  event     String?
+  role      String?
+  location  String?
+  date      DateTime?
+  url       String?
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Service {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  priceNote   String?
+  deliverable String?
+  sortOrder   Float     @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model CaseStudy {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  client    String?
+  problem   String?
+  approach  String?
+  outcome   String?
+  images    Json      @default("[]")
+  url       String?
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+model Testimonial {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quote     String
+  author    String
+  role      String?
+  company   String?
+  avatarUrl String?
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+}
+
+// ============================= PRESENTATION =============================
+// The ONLY place presentation is stored.
+
+model Document {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       DocKind  @default(RESUME)
+  name       String   @default("My Resume")
+  templateId String   @default("minimal")
+  config     Json     @default("{}")
+
+  lastPdfKey  String?
+  lastPdfHash String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions     DocumentVersion[]
+  applications Application[]
+  shareLinks   ShareLink[]
+
+  @@index([userId])
+}
+
+enum DocKind {
+  RESUME
+  CV
+}
+
+model Portfolio {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  themeId     String    @default("minimal")
+  config      Json      @default("{}")
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ============================= OPERATIONS =============================
+
+/// A frozen copy of what a document looked like when it was sent somewhere.
+/// Presentation config AND a snapshot of the profile data, so the exact PDF a
+/// user sent to an employer can always be reproduced — even after they edit
+/// their profile.
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?
+  templateId String
+  kind       DocKind  @default(RESUME)
+  config     Json     @default("{}")
+  snapshot   Json // the resolved profile data at that moment
+  createdAt  DateTime @default(now())
+
+  applications Application[]
+
+  @@index([documentId, createdAt])
+  @@index([userId])
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+/// Which version went where, when, and what happened next.
+model Application {
+  id       String  @id @default(cuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  String
+  role     String
+  location String?
+  jobUrl   String?
+
+  documentId String?
+  document   Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  versionId  String?
+  version    DocumentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  jobDescription String?
+  matchScore     Int?
+
+  status     ApplicationStatus @default(SAVED)
+  appliedAt  DateTime?
+  nextStep   String?
+  nextStepAt DateTime?
+  notes      String?
+
+  sortOrder Float     @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, deletedAt])
+}
+
+/// A read-only link that can expire and be revoked — for sending a profile to
+/// one recruiter without publishing it to the world.
+model ShareLink {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String    @unique
+  label      String?
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  views      Int       @default(0)
+  lastViewAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+model AbuseReport {
+  id         String       @id @default(cuid())
+  username   String
+  reason     String
+  detail     String?
+  reporterIp String?
+  status     ReportStatus @default(OPEN)
+  reviewedAt DateTime?
+  reviewedBy String?
+  adminNote  String?
+  createdAt  DateTime     @default(now())
+
+  @@index([username])
+  @@index([status, createdAt])
+}
+
+model AIRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      String
+  model     String
+  tokensIn  Int      @default(0)
+  tokensOut Int      @default(0)
+  ms        Int      @default(0)
+  cached    Boolean  @default(false)
+  accepted  Boolean?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id           String   @id @default(cuid())
+  userId       String // the profile OWNER, never the visitor
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String
+  targetId     String?
+  visitorHash  String
+  country      String?
+  referrerHost String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, type, createdAt])
+  @@index([userId, createdAt])
+}
