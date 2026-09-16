@@ -10,6 +10,9 @@ export const revalidate = 3600
 /** Public profiles only — never unlisted, never private. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  if (!process.env.DATABASE_URL) {
+    return [{ url: base, lastModified: new Date(), priority: 1 }]
+  }
 
   const users = await db.user.findMany({
     where: {
