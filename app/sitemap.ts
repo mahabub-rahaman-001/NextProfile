@@ -10,6 +10,11 @@ export const revalidate = 3600
 /** Public profiles only — never unlisted, never private. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const home = { url: base, lastModified: new Date(), priority: 1 }
+
+  if (!process.env.DATABASE_URL) {
+    return [home]
+  }
 
   const users = await db.user.findMany({
     where: {
@@ -23,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   return [
-    { url: base, lastModified: new Date(), priority: 1 },
+    home,
     ...users.map((u) => ({
       url: `${base}/view/${u.username}`,
       lastModified: u.profile?.updatedAt ?? new Date(),
